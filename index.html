@@ -3,7 +3,7 @@
 <head> 
     <meta charset="UTF-8"> 
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>Quản Lý Nhân Viên</title> 
+    <title>Quản Lý Đơn Hàng Nhân Viên</title> 
     <style> 
         /* LOGIN SCREEN - MÀN HÌNH ĐĂNG NHẬP */ 
         .login-overlay { 
@@ -88,7 +88,7 @@
             grid-template-columns: repeat(2, 1fr); 
             gap: 20px; margin-bottom: 30px; 
         } 
-        .input-group { display: flex; flex-direction: column; } 
+        .input-group { display: flex; flex-direction: column; position: relative; } 
         .input-group label { margin-bottom: 8px; font-weight: 600; color: #333; } 
         .input-group input[type="text"], .input-group input[type="number"], .input-group textarea { 
             padding: 15px; border: 2px solid #e1e5e9; 
@@ -104,6 +104,51 @@
             font-size: 0.85em; color: #666; margin-top: 5px; font-style: italic; 
         } 
  
+        /* AUTOCOMPLETE STYLES */ 
+        .autocomplete-dropdown { 
+            position: absolute; 
+            top: calc(100% + 5px); /* Khoảng cách từ input */ 
+            left: 0; 
+            right: 0; 
+            background: white; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            max-height: 200px; 
+            overflow-y: auto; 
+            z-index: 100; 
+            display: none; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); 
+        } 
+        .autocomplete-item { 
+            padding: 10px 15px; 
+            cursor: pointer; 
+            border-bottom: 1px solid #eee; 
+            transition: background-color 0.2s ease; 
+        } 
+        .autocomplete-item:last-child { 
+            border-bottom: none; 
+        } 
+        .autocomplete-item:hover, 
+        .autocomplete-item.selected { 
+            background-color: #f0f0f0; 
+        } 
+        .autocomplete-item.selected { /* Thêm style cho item được chọn bằng phím */ 
+            background-color: #e9e9e9; 
+        } 
+        .autocomplete-item .highlight { 
+            font-weight: bold; 
+            color: #4facfe; 
+        } 
+        .autocomplete-item .employee-name { 
+            font-weight: 600; 
+            color: #333; 
+        } 
+        .autocomplete-item .customer-info { 
+            font-size: 0.85em; 
+            color: #666; 
+            margin-top: 2px; 
+        } 
+  
         /* Buttons */ 
         .btn { 
             padding: 15px 30px; border: none; 
@@ -121,7 +166,7 @@
             padding: 12px 20px; font-size: 14px; 
         } 
         .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); } 
- 
+  
         /* Search & Reset Section */ 
         .management-section { 
             background: #f8f9fa; padding: 25px; 
@@ -144,7 +189,7 @@
             text-align: left; 
         } 
         .management-section .btn { width: 100%; margin-top: 0; } 
- 
+  
         /* Transaction History */ 
         .transactions { 
             background: white; border-radius: 15px; 
@@ -153,159 +198,77 @@
         .transactions h3 { margin-bottom: 20px; color: #333; font-size: 1.5em; } 
         .transaction-list { max-height: 500px; overflow-y: auto; } 
  
-        /* Added for grouping by date */ 
-        .transaction-date-group { 
-            margin-bottom: 25px; 
-            border: 1px solid #e0e0e0; 
-            border-radius: 10px; 
-            overflow: hidden; 
-        } 
-        .transaction-date-group h4 { 
-            background: #f0f0f0; 
-            padding: 10px 20px; 
-            margin: 0; 
-            border-bottom: 1px solid #e0e0e0; 
-            font-size: 1.1em; 
-            color: #555; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        } 
-        .transaction-date-group h4 span.daily-total { 
-            font-weight: bold; 
-            color: #2c3e50; 
-        } 
- 
-        .transaction-item { 
-            display: flex; justify-content: space-between; 
-            align-items: center; padding: 15px 20px; margin-bottom: 0; 
-            background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%); 
-            border-radius: 0; 
-            border-left: 5px solid #4facfe; 
-            border-bottom: 1px solid #eee; 
-            cursor: pointer; transition: all 0.2s ease; 
-        } 
-        .transaction-item:last-child { 
-            border-bottom: none; 
-        } 
-        .transaction-item:hover { 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
-            transform: translateY(-1px); border-left: 5px solid #00f2fe; 
-        } 
-        .transaction-info { 
-            text-align: left; 
-        } 
-        .transaction-info h4 { 
-            color: #333; margin-bottom: 5px; font-size: 1.1em; 
-        } 
-        .transaction-info p { 
-            margin: 0; font-size: 0.9em; color: #555; 
-        } 
-        .transaction-amount.add { color: #27ae60; font-weight: bold; font-size: 1.1em; } 
-        .transaction-amount.subtract { color: #e74c3c; font-weight: bold; font-size: 1.1em; } 
-        .date { color: #7f8c8d; font-size: 0.8em; margin-top: 5px;} 
-        .no-data { 
-            text-align: center; color: #7f8c8d; 
-            font-style: italic; padding: 40px; 
-        } 
-        .paid-status { 
-            font-size: 0.8em; 
-            font-weight: 600; 
-            padding: 3px 8px; 
-            border-radius: 5px; 
-            color: white; 
-            display: inline-block; 
-            margin-left: 10px; 
-        } 
-        .paid-status.paid { 
-            background-color: #28a745; 
-        } 
-        .paid-status.unpaid { 
-            background-color: #ffc107; 
-        } 
- 
-        /* Border for "Xác nhận đơn tổng tiền từng ngày" */ 
-        .confirmation-border { 
-            border: 2px solid #28a745; 
-            border-radius: 10px; 
-            padding: 15px; 
-            margin-bottom: 20px; 
-            background: #f8f9fa; 
-        } 
-        .confirmation-border h4 { 
-            margin: 0; color: #28a745; font-size: 1.2em; 
-            display: flex; justify-content: space-between; 
-            align-items: center; 
-        } 
-        .confirmation-border .total-amount { 
-            font-weight: bold; color: #27ae60; 
-        } 
- 
-        /* Order Statistics */ 
-        .order-stats { 
-            display: flex; justify-content: space-around; margin-bottom: 20px; 
-            background: #f8f9fa; border-radius: 10px; padding: 15px; 
-            border: 2px solid #28a745; 
-        } 
-        .order-stats .stat-item { 
-            text-align: center; 
-        } 
-        .order-stats .stat-item h4 { 
-            margin: 0; font-size: 1.2em; color: #28a745; 
-        } 
-        .order-stats .stat-item p { 
-            margin: 5px 0 0; font-size: 1.5em; font-weight: bold; 
-            color: #27ae60; 
-        } 
- 
-        /* Paid Orders Section */ 
-        .paid-orders-section { 
-            margin-top: 30px; 
-            border: 2px solid #28a745; 
-            border-radius: 10px; 
-            padding: 20px; 
-            background: #e8f5e9; 
-        } 
-        .paid-orders-section h3 { 
-            margin: 0 0 15px 0; color: #28a745; font-size: 1.5em; 
-            display: flex; justify-content: space-between; 
-            align-items: center; 
-        } 
-        .paid-orders-section .order-list { 
-            max-height: 400px; overflow-y: auto; 
-        } 
-        .paid-orders-section .transaction-item { 
-            border-left: 5px solid #28a745; 
-            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); 
-        } 
-        .paid-orders-section .transaction-item:hover { 
-            border-left: 5px solid #20c997; 
-        } 
- 
-        /* Unpaid Orders Section */ 
-        .unpaid-orders-section { 
-            margin-top: 30px; 
-            border: 2px solid #ffc107; 
-            border-radius: 10px; 
-            padding: 20px; 
-            background: #fff3cd; 
-        } 
-        .unpaid-orders-section h3 { 
-            margin: 0 0 15px 0; color: #ffc107; font-size: 1.5em; 
-            display: flex; justify-content: space-between; 
-            align-items: center; 
-        } 
-        .unpaid-orders-section .order-list { 
-            max-height: 400px; overflow-y: auto; 
-        } 
-        .unpaid-orders-section .transaction-item { 
-            border-left: 5px solid #ffc107; 
-            background: linear-gradient(135deg, #fff8e1 0%, #fff3cd 100%); 
-        } 
-        .unpaid-orders-section .transaction-item:hover { 
-            border-left: 5px solid #e0b100; 
-        } 
- 
+        /* Added for grouping by date */  
+        .transaction-date-group {  
+            margin-bottom: 25px;  
+            border: 1px solid #e0e0e0;  
+            border-radius: 10px;  
+            overflow: hidden;  
+        }  
+        .transaction-date-group h4 {  
+            background: #f0f0f0;  
+            padding: 10px 20px;  
+            margin: 0;  
+            border-bottom: 1px solid #e0e0e0;  
+            font-size: 1.1em;  
+            color: #555;  
+            display: flex;  
+            justify-content: space-between;  
+            align-items: center;  
+        }  
+        .transaction-date-group h4 span.daily-total {  
+            font-weight: bold;  
+            color: #2c3e50;  
+        }  
+  
+        .transaction-item {  
+            display: flex; justify-content: space-between;  
+            align-items: center; padding: 15px 20px; margin-bottom: 0;  
+            background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);  
+            border-radius: 0;  
+            border-left: 5px solid #4facfe;  
+            border-bottom: 1px solid #eee;  
+            cursor: pointer; transition: all 0.2s ease;  
+        }  
+        .transaction-item:last-child {  
+            border-bottom: none;  
+        }  
+        .transaction-item:hover {  
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);  
+            transform: translateY(-1px); border-left: 5px solid #00f2fe;  
+        }  
+        .transaction-info {  
+            text-align: left;  
+        }  
+        .transaction-info h4 {  
+            color: #333; margin-bottom: 5px; font-size: 1.1em;  
+        }  
+        .transaction-info p {  
+            margin: 0; font-size: 0.9em; color: #555;  
+        }  
+        .transaction-amount.add { color: #27ae60; font-weight: bold; font-size: 1.1em; }  
+        .transaction-amount.subtract { color: #e74c3c; font-weight: bold; font-size: 1.1em; }  
+        .date { color: #7f8c8d; font-size: 0.8em; margin-top: 5px;}  
+        .no-data {  
+            text-align: center; color: #7f8c8d;  
+            font-style: italic; padding: 40px;  
+        }  
+        .paid-status {  
+            font-size: 0.8em;  
+            font-weight: 600;  
+            padding: 3px 8px;  
+            border-radius: 5px;  
+            color: white;  
+            display: inline-block;  
+            margin-left: 10px;  
+        }  
+        .paid-status.paid {  
+            background-color: #28a745;  
+        }  
+        .paid-status.unpaid {  
+            background-color: #ffc107;  
+        }  
+         
         /* Dialogs */ 
         .overlay { 
             position: fixed; top: 0; left: 0; 
@@ -326,98 +289,6 @@
         .edit-transaction-dialog input[type="text"], .edit-transaction-dialog input[type="number"], 
         .employee-detail-dialog input[type="text"], .employee-detail-dialog input[type="number"], 
         .edit-transaction-dialog .checkbox-group label, .employee-detail-dialog .checkbox-group label, .add-order-dialog .checkbox-group label { width: 100%; } 
- 
-        .employee-detail-dialog .detail-list { 
-            max-height: 400px; 
-            overflow-y: auto; 
-            text-align: left; 
-            margin-top: 20px; 
-            padding-right: 10px; 
-        } 
-        .employee-detail-dialog .detail-list h4 { 
-            margin-top: 15px; 
-            margin-bottom: 10px; 
-            color: #333; 
-            font-size: 1.2em; 
-            border-bottom: 1px solid #eee; 
-            padding-bottom: 5px; 
-        } 
-        .employee-detail-dialog .detail-list ul { 
-            list-style: none; 
-            padding: 0; 
-        } 
-        .employee-detail-dialog .detail-list ul li { 
-            background: #f8f8f8; 
-            padding: 10px; 
-            margin-bottom: 8px; 
-            border-radius: 8px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        } 
-        .employee-detail-dialog .detail-list ul li span { 
-            color: #555; 
-            font-size: 0.9em; 
-        } 
-        .employee-detail-dialog .detail-list ul li .amount { 
-            font-weight: bold; 
-            color: #28a745; 
-        } 
-        .employee-detail-dialog .summary-info { 
-            text-align: left; 
-            margin-bottom: 20px; 
-            padding-bottom: 10px; 
-            border-bottom: 1px solid #ddd; 
-        } 
-        .employee-detail-dialog .summary-info p { 
-            margin: 5px 0; 
-            font-size: 1em; 
-            color: #444; 
-        } 
-        .employee-detail-dialog .summary-info .total-amount { 
-            font-size: 1.3em; 
-            font-weight: bold; 
-            color: #27ae60; 
-            margin-top: 10px; 
-        } 
- 
-        /* Add Order Dialog */ 
-        .add-order-dialog .order-list { 
-            max-height: 300px; 
-            overflow-y: auto; 
-            margin-bottom: 20px; 
-            border: 1px solid #eee; 
-            border-radius: 8px; 
-            padding: 10px; 
-        } 
-        .add-order-dialog .order-item { 
-            display: flex; justify-content: space-between; align-items: center; 
-            padding: 10px; margin-bottom: 8px; 
-            background: #f8f9fa; border-radius: 6px; 
-            border-left: 4px solid #4facfe; 
-        } 
-        .add-order-dialog .order-item:last-child { 
-            margin-bottom: 0; 
-        } 
-        .add-order-dialog .order-item .amount { 
-            font-weight: bold; color: #27ae60; 
-        } 
-        .add-order-dialog .order-item .actions { 
-            display: flex; gap: 5px; 
-        } 
-        .add-order-dialog .order-item .actions button { 
-            padding: 5px 10px; font-size: 12px; 
-        } 
-        .add-order-dialog .total-row { 
-            display: flex; justify-content: space-between; 
-            font-weight: bold; color: #27ae60; 
-            padding: 10px; background: #f0f0f0; 
-            border-radius: 6px; 
-            margin-top: 10px; 
-        } 
-        .add-order-dialog .total-row .total-amount { 
-            font-size: 1.2em; 
-        } 
  
         /* Responsive */ 
         @media (max-width: 768px) { 
@@ -476,7 +347,7 @@
         </div> 
         <div class="input-group"> 
             <label>Nhập số tiền điều chỉnh (ví dụ: 10,-20 hoặc 5,10):</label> 
-            <input type="text" id="adjustmentAmount" placeholder="10,20 hoặc -50"> 
+            <input type="text" id="adjustmentAmount" placeholder="+10 hoặc -50"> 
         </div> 
         <div class="btn-group"> 
             <button class="btn" style="background: #56ab2f;" onclick="adjustTransactionAmount('add')" >➕ Cộng tiền</button> 
@@ -533,6 +404,7 @@
                 <div class="input-group"> 
                     <label>🔹 Tên nhân viên:</label> 
                     <input type="text" id="employeeName" placeholder="Nhập tên nhân viên" autocomplete="off"> 
+                    <div class="autocomplete-dropdown" id="employeeAutocomplete"></div> 
                 </div> 
                 <div class="input-group"> 
                     <label>👨‍💼 Họ tên khách hàng:</label> 
@@ -544,7 +416,8 @@
                 </div> 
                 <div class="input-group"> 
                     <label>📞 Số điện thoại khách hàng:</label> 
-                    <input type="text" id="customerPhone" placeholder="Nhập số điện thoại khách hàng"> 
+                    <input type="text" id="customerPhone" placeholder="Nhập số điện thoại khách hàng" autocomplete="off"> 
+                    <div class="autocomplete-dropdown" id="phoneAutocomplete"></div> 
                 </div> 
                 <div class="input-group"> 
                     <label>💰 Số tiền của khách hàng (VNĐ):</label> 
@@ -607,6 +480,10 @@
         // 🔥 🔥 🔥 PHẦN MẬT KHẨU - ĐỔI MẬT KHẨU TẠI ĐÂY 🔥 🔥 🔥 
         const ADMIN_PASSWORD = "0965579926"; // 👈 ĐỔI MẬT KHẨU CỦA BẠN VÀO ĐÂY 
  
+        // Biến để quản lý trạng thái autocomplete 
+        let currentEmployeeAutocompleteIndex = -1; 
+        let currentPhoneAutocompleteIndex = -1; 
+ 
         // Kiểm tra đăng nhập 
         function checkPassword() { 
             const password = document.getElementById('loginPassword').value; 
@@ -635,12 +512,17 @@
                 document.getElementById('loginScreen').style.display = 'flex'; 
                 document.getElementById('mainApp').classList.add('app-hidden'); 
                 document.getElementById('logoutBtn').style.display = 'none'; 
-                paidTransactions = []; // Xóa dữ liệu tạm thời 
+                // Xóa dữ liệu tạm thời (không xóa localStorage để dữ liệu được bảo toàn) 
+                paidTransactions = []; 
                 unpaidTransactions = []; 
                 pendingTransactions = []; 
                 orderStatistics = {}; 
                 currentEmployeeOrders = []; 
-                localStorage.clear(); // XÓA TOÀN BỘ localStorage 
+                // localStorage.clear(); // KHÔNG NÊN DÙNG HÀM NÀY NẾU MUỐN LƯU DỮ LIỆU 
+                // Nếu muốn xóa dữ liệu khi đăng xuất, bạn cần xóa từng key một. 
+                // Ví dụ: localStorage.removeItem('paidEmployeeTransactions'); 
+                // Hoặc giữ lại dữ liệu và chỉ đăng xuất giao diện. 
+                alert('Bạn đã đăng xuất.'); 
             } 
         } 
  
@@ -655,7 +537,7 @@
  
             // Loại bỏ tất cả ký tự không phải số và dấu +/- 
             const cleanString = inputString.replace(/[^\d\+\-]/g, ''); 
-             
+              
             // Nếu không có dấu + hoặc -, mặc định là dương 
             if (!cleanString.includes('+') && !cleanString.includes('-')) { 
                 return parseInt(cleanString) || 0; 
@@ -664,17 +546,17 @@
             // Xử lý chuỗi có dấu 
             let sum = 0; 
             const parts = cleanString.split(/[,\s]/).filter(part => part.trim() !== ''); 
-             
+              
             parts.forEach(part => { 
                 const num = parseInt(part); 
                 if (!isNaN(num)) { 
                     sum += num; 
                 } 
             }); 
-             
+              
             return sum; 
         } 
- 
+         
         function formatCurrency(amount) { 
             return new Intl.NumberFormat('vi-VN', { 
                 style: 'currency', 
@@ -750,25 +632,26 @@
                 date: todayDate 
             }; 
  
-            const orderStats = document.getElementById('orderStats'); 
-            if (orderStats) { 
-                orderStats.innerHTML = ` 
-                    <div class="order-stats"> 
-                        <div class="stat-item"> 
-                            <h4>Số đơn đã thanh toán</h4> 
-                            <p>${stats.confirmedOrders}</p> 
-                        </div> 
-                        <div class="stat-item"> 
-                            <h4>Số đơn nợ</h4> 
-                            <p>${stats.outstandingOrders}</p> 
-                        </div> 
-                        <div class="stat-item"> 
-                            <h4>Tổng số đơn</h4> 
-                            <p>${stats.totalOrders}</p> 
-                        </div> 
-                    </div> 
-                `; 
-            } 
+            // Phần này không tồn tại trong HTML hiện tại, chỉ để tránh lỗi nếu có 
+            // const orderStats = document.getElementById('orderStats'); 
+            // if (orderStats) { 
+            //     orderStats.innerHTML = ` 
+            //         <div class="order-stats"> 
+            //             <div class="stat-item"> 
+            //                 <h4>Số đơn đã thanh toán</h4> 
+            //                 <p>${stats.confirmedOrders}</p> 
+            //             </div> 
+            //             <div class="stat-item"> 
+            //                 <h4>Số đơn nợ</h4> 
+            //                 <p>${stats.outstandingOrders}</p> 
+            //             </div> 
+            //             <div class="stat-item"> 
+            //                 <h4>Tổng số đơn</h4> 
+            //                 <p>${stats.totalOrders}</p> 
+            //             </div> 
+            //         </div> 
+            //     `; 
+            // } 
         } 
  
         // --- Hiển thị giao dịch (chỉ khi tìm kiếm) --- 
@@ -853,10 +736,186 @@
                 orderStatistics = JSON.parse(savedOrderStatistics); 
             } 
             updateStats(); 
-            updateOrderStatisticsUI(); 
+            updateOrderStatistics(); // Changed from updateOrderStatisticsUI() to updateOrderStatistics() 
+            loadSuggestionLists(); // Load autocomplete data 
             // Không hiển thị lịch sử mặc định, chỉ khi tìm kiếm 
             document.getElementById('transactionSection').style.display = 'none'; 
         } 
+ 
+        // --- Autocomplete Functions --- 
+        function saveEmployeeList() { 
+            const allTransactions = [...paidTransactions, ...unpaidTransactions, ...pendingTransactions]; 
+            const uniqueEmployees = [...new Set(allTransactions.map(t => t.employeeName).filter(Boolean))]; 
+            localStorage.setItem('employeeList', JSON.stringify(uniqueEmployees)); 
+        } 
+ 
+        function saveCustomerList() { 
+            const allTransactions = [...paidTransactions, ...unpaidTransactions, ...pendingTransactions]; 
+            const customers = allTransactions.map(t => ({ 
+                phone: t.customerPhone, 
+                name: t.customerName, 
+                address: t.customerAddress 
+            })).filter(c => c.phone); 
+ 
+            // Loại bỏ trùng lặp theo số điện thoại 
+            const uniqueCustomers = Object.values(customers.reduce((acc, customer) => { 
+                if (customer.phone) { // Chỉ thêm nếu có số điện thoại 
+                    acc[customer.phone] = customer; 
+                } 
+                return acc; 
+            }, {})); 
+ 
+            localStorage.setItem('customerList', JSON.stringify(uniqueCustomers)); 
+        } 
+ 
+        function loadSuggestionLists() { 
+            saveEmployeeList(); 
+            saveCustomerList(); 
+        } 
+ 
+        function filterEmployees(searchTerm) { 
+            const employeeList = JSON.parse(localStorage.getItem('employeeList')) || []; 
+            return employeeList.filter(name => 
+                name.toLowerCase().includes(searchTerm.toLowerCase()) 
+            ).slice(0, 10); 
+        } 
+ 
+        function filterCustomers(searchTerm) { 
+            const customerList = JSON.parse(localStorage.getItem('customerList')) || []; 
+            return customerList.filter(customer => 
+                customer.phone && customer.phone.includes(searchTerm.replace(/\D/g, '')) 
+            ).slice(0, 5); 
+        } 
+ 
+        function showAutocomplete(dropdownId, items, searchTerm, inputElementId) { 
+            const dropdown = document.getElementById(dropdownId); 
+            const input = document.getElementById(inputElementId); 
+            dropdown.innerHTML = ''; 
+             
+            if (items.length === 0 || searchTerm.length < (dropdownId === 'phoneAutocomplete' ? 3 : 1)) { 
+                dropdown.style.display = 'none'; 
+                return; 
+            } 
+ 
+            items.forEach((item, index) => { 
+                const div = document.createElement('div'); 
+                div.className = 'autocomplete-item'; 
+                div.setAttribute('data-index', index); // Dùng cho navigation bằng phím 
+ 
+                let displayHtml = ''; 
+                if (dropdownId === 'employeeAutocomplete') { 
+                    const employeeName = item; 
+                    const highlighted = employeeName.replace( 
+                        new RegExp(`(${searchTerm})`, 'gi'), 
+                        '<span class="highlight">$1</span>' 
+                    ); 
+                    displayHtml = `<div class="employee-name">${highlighted}</div>`; 
+                    div.onclick = () => selectAutocompleteItem(dropdownId, employeeName); 
+                } else if (dropdownId === 'phoneAutocomplete') { 
+                    const phone = item.phone; 
+                    const name = item.name || ''; 
+                    const address = item.address || ''; 
+                    const highlightedPhone = phone.replace( 
+                        new RegExp(`(${searchTerm})`, 'gi'), 
+                        '<span class="highlight">$1</span>' 
+                    ); 
+                    displayHtml = ` 
+                        <div>${highlightedPhone}</div> 
+                        <div class="customer-info">${name} - ${address}</div> 
+                    `; 
+                    div.onclick = () => selectAutocompleteItem(dropdownId, item); 
+                } 
+                 
+                div.innerHTML = displayHtml; 
+                dropdown.appendChild(div); 
+            }); 
+             
+            dropdown.style.display = 'block'; 
+            // Reset index khi hiển thị dropdown mới 
+            if (dropdownId === 'employeeAutocomplete') currentEmployeeAutocompleteIndex = -1; 
+            if (dropdownId === 'phoneAutocomplete') currentPhoneAutocompleteIndex = -1; 
+        } 
+ 
+        function selectAutocompleteItem(dropdownId, item) { 
+            if (dropdownId === 'employeeAutocomplete') { 
+                document.getElementById('employeeName').value = item; 
+                document.getElementById('employeeAutocomplete').style.display = 'none'; 
+            } else if (dropdownId === 'phoneAutocomplete') { 
+                document.getElementById('customerPhone').value = item.phone; 
+                document.getElementById('customerName').value = item.name || ''; 
+                document.getElementById('customerAddress').value = item.address || ''; 
+                document.getElementById('phoneAutocomplete').style.display = 'none'; 
+            } 
+            // Sau khi chọn, focus lại vào input tiếp theo hoặc input hiện tại 
+            document.activeElement.focus(); 
+        } 
+ 
+        // Ẩn dropdown khi click ra ngoài 
+        document.addEventListener('click', function(e) { 
+            if (!e.target.closest('.input-group')) { 
+                document.getElementById('employeeAutocomplete').style.display = 'none'; 
+                document.getElementById('phoneAutocomplete').style.display = 'none'; 
+                currentEmployeeAutocompleteIndex = -1; 
+                currentPhoneAutocompleteIndex = -1; 
+            } 
+        }); 
+ 
+        // Event listeners cho autocomplete 
+        document.getElementById('employeeName').addEventListener('input', function() { 
+            const searchTerm = this.value.trim(); 
+            const filtered = filterEmployees(searchTerm); 
+            showAutocomplete('employeeAutocomplete', filtered, searchTerm, 'employeeName'); 
+        }); 
+ 
+        document.getElementById('customerPhone').addEventListener('input', function() { 
+            const searchTerm = this.value.trim(); 
+            const filtered = filterCustomers(searchTerm); 
+            showAutocomplete('phoneAutocomplete', filtered, searchTerm, 'customerPhone'); 
+        }); 
+ 
+        // Điều hướng bằng phím mũi tên và Enter cho autocomplete 
+        document.addEventListener('keydown', function(e) { 
+            const employeeDropdown = document.getElementById('employeeAutocomplete'); 
+            const phoneDropdown = document.getElementById('phoneAutocomplete'); 
+            const employeeItems = employeeDropdown.querySelectorAll('.autocomplete-item'); 
+            const phoneItems = phoneDropdown.querySelectorAll('.autocomplete-item'); 
+ 
+            const handleArrowKeys = (items, currentIndex, dropdownId) => { 
+                if (items.length === 0) return currentIndex; 
+ 
+                if (items[currentIndex]) { 
+                    items[currentIndex].classList.remove('selected'); 
+                } 
+ 
+                if (e.key === 'ArrowDown') { 
+                    currentIndex = (currentIndex + 1) % items.length; 
+                } else if (e.key === 'ArrowUp') { 
+                    currentIndex = (currentIndex - 1 + items.length) % items.length; 
+                } 
+                items[currentIndex].classList.add('selected'); 
+                items[currentIndex].scrollIntoView({ block: 'nearest' }); 
+                return currentIndex; 
+            }; 
+ 
+            if (employeeDropdown.style.display === 'block' && document.activeElement.id === 'employeeName') { 
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { 
+                    e.preventDefault(); 
+                    currentEmployeeAutocompleteIndex = handleArrowKeys(employeeItems, currentEmployeeAutocompleteIndex, 'employeeAutocomplete'); 
+                } else if (e.key === 'Enter' && currentEmployeeAutocompleteIndex !== -1) { 
+                    e.preventDefault(); 
+                    employeeItems[currentEmployeeAutocompleteIndex].click(); 
+                } 
+            } else if (phoneDropdown.style.display === 'block' && document.activeElement.id === 'customerPhone') { 
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { 
+                    e.preventDefault(); 
+                    currentPhoneAutocompleteIndex = handleArrowKeys(phoneItems, currentPhoneAutocompleteIndex, 'phoneAutocomplete'); 
+                } else if (e.key === 'Enter' && currentPhoneAutocompleteIndex !== -1) { 
+                    e.preventDefault(); 
+                    phoneItems[currentPhoneAutocompleteIndex].click(); 
+                } 
+            } 
+        }); 
+ 
  
         // Lưu đơn hàng mới 
         function saveOrder() { 
@@ -893,7 +952,10 @@
             pendingTransactions.unshift(transaction); 
             localStorage.setItem('pendingEmployeeTransactions', JSON.stringify(pendingTransactions)); 
  
-            alert(`✅ Đã lưu đơn hàng CHƯA TRẢ cho nhân viên ${employeeName}:\nSố tiền khách hàng: +${formatCurrency(totalOrderAmount)}\n(${orderAmountInput})`); 
+            // Cập nhật danh sách gợi ý sau khi thêm đơn hàng mới 
+            loadSuggestionLists(); 
+ 
+            alert(`✅ Đã lưu đơn hàng CHƯA TRẢ cho nhân viên ${employeeName}:\nSố tiền khách hàng: +${formatCurrency(totalOrderAmount)}`); 
  
             updateStats(); 
             updateOrderStatistics(); 
@@ -985,12 +1047,13 @@
             currentEmployeeOrders.unshift(newOrder); 
             pendingTransactions.unshift(newOrder); 
             localStorage.setItem('pendingEmployeeTransactions', JSON.stringify(pendingTransactions)); 
+            loadSuggestionLists(); // Cập nhật danh sách gợi ý 
  
             document.getElementById('newOrderAmount').value = ''; 
             displayCurrentEmployeeOrders(); 
  
             const sign = newOrderAmount >= 0 ? '+' : ''; 
-            alert(`✅ Đã thêm đơn hàng mới cho nhân viên ${currentEmployeeName}:\n${sign}${formatCurrency(newOrderAmount)}\n(${newOrderAmountInput})`); 
+            alert(`✅ Đã thêm đơn hàng mới cho nhân viên ${currentEmployeeName}:\n${sign}${formatCurrency(newOrderAmount)}`); 
         } 
  
         // Xóa đơn hàng con 
@@ -999,6 +1062,7 @@
                 currentEmployeeOrders = currentEmployeeOrders.filter(order => order.id !== orderId); 
                 pendingTransactions = pendingTransactions.filter(order => order.id !== orderId); 
                 localStorage.setItem('pendingEmployeeTransactions', JSON.stringify(pendingTransactions)); 
+                loadSuggestionLists(); // Cập nhật danh sách gợi ý 
                 displayCurrentEmployeeOrders(); 
             } 
         } 
@@ -1029,6 +1093,7 @@
  
                     localStorage.setItem('paidEmployeeTransactions', JSON.stringify(paidTransactions)); 
                     localStorage.setItem('pendingEmployeeTransactions', JSON.stringify(pendingTransactions)); 
+                    loadSuggestionLists(); // Cập nhật danh sách gợi ý 
  
                     // Cập nhật thống kê đơn hàng 
                     updateOrderStatistics(); 
@@ -1130,6 +1195,7 @@
             } else { 
                 localStorage.setItem('unpaidEmployeeTransactions', JSON.stringify(unpaidTransactions)); 
             } 
+            loadSuggestionLists(); // Cập nhật danh sách gợi ý 
  
             updateStats(); 
             updateOrderStatistics(); 
@@ -1169,13 +1235,14 @@
                 'Bạn có chắc muốn xóa đơn hàng này không?', 
                 () => { 
                     transactionArray.splice(transactionIndex, 1); 
-                     
+                      
                     // Lưu vào localStorage 
                     if (transactionArray === paidTransactions) { 
                         localStorage.setItem('paidEmployeeTransactions', JSON.stringify(paidTransactions)); 
                     } else { 
                         localStorage.setItem('unpaidEmployeeTransactions', JSON.stringify(unpaidTransactions)); 
                     } 
+                    loadSuggestionLists(); // Cập nhật danh sách gợi ý 
  
                     updateStats(); 
                     updateOrderStatistics(); 
@@ -1214,10 +1281,15 @@
                     paidTransactions = paidTransactions.filter(t => t.employeeName.toLowerCase() !== employeeName.toLowerCase()); 
                     // Xóa tất cả đơn hàng nợ của nhân viên 
                     unpaidTransactions = unpaidTransactions.filter(t => t.employeeName.toLowerCase() !== employeeName.toLowerCase()); 
+                    // Xóa tất cả đơn hàng đang chờ của nhân viên 
+                    pendingTransactions = pendingTransactions.filter(t => t.employeeName.toLowerCase() !== employeeName.toLowerCase()); 
+ 
  
                     // Lưu vào localStorage 
                     localStorage.setItem('paidEmployeeTransactions', JSON.stringify(paidTransactions)); 
                     localStorage.setItem('unpaidEmployeeTransactions', JSON.stringify(unpaidTransactions)); 
+                    localStorage.setItem('pendingEmployeeTransactions', JSON.stringify(pendingTransactions)); 
+                    loadSuggestionLists(); // Cập nhật danh sách gợi ý 
  
                     document.getElementById('employeeToDelete').value = ''; 
                     updateStats(); 
@@ -1240,13 +1312,16 @@
                     localStorage.removeItem('unpaidEmployeeTransactions'); 
                     localStorage.removeItem('pendingEmployeeTransactions'); 
                     localStorage.removeItem('orderStatistics'); 
+                    localStorage.removeItem('employeeList'); // Xóa danh sách gợi ý nhân viên 
+                    localStorage.removeItem('customerList'); // Xóa danh sách gợi ý khách hàng 
+ 
                     paidTransactions = []; 
                     unpaidTransactions = []; 
                     pendingTransactions = []; 
                     orderStatistics = {}; 
                     currentEmployeeOrders = []; 
                     updateStats(); 
-                    updateOrderStatisticsUI(); 
+                    updateOrderStatistics(); 
                     document.getElementById('searchEmployee').value = ''; 
                     document.getElementById('employeeStats').style.display = 'none'; 
                     document.getElementById('transactionSection').style.display = 'none'; 
@@ -1269,7 +1344,8 @@
  
             const allTransactionsForEmployee = [ 
                 ...paidTransactions.filter(t => t.employeeName.toLowerCase().includes(searchTerm)), 
-                ...unpaidTransactions.filter(t => t.employeeName.toLowerCase().includes(searchTerm)) 
+                ...unpaidTransactions.filter(t => t.employeeName.toLowerCase().includes(searchTerm)), 
+                ...pendingTransactions.filter(t => t.employeeName.toLowerCase().includes(searchTerm)) // Bao gồm cả pending 
             ]; 
  
             if (allTransactionsForEmployee.length === 0) { 
@@ -1285,26 +1361,32 @@
             const totalUnpaidAmount = unpaidTransactions 
                 .filter(t => t.employeeName.toLowerCase().includes(searchTerm)) 
                 .reduce((sum, t) => sum + t.orderAmount, 0); 
+            const totalPendingAmount = pendingTransactions 
+                .filter(t => t.employeeName.toLowerCase().includes(searchTerm)) 
+                .reduce((sum, t) => sum + t.orderAmount, 0); 
+ 
             const todayPaidAmount = paidTransactions 
                 .filter(t => t.employeeName.toLowerCase().includes(searchTerm) && t.date === getTodayDate()) 
                 .reduce((sum, t) => sum + t.orderAmount, 0); 
             const todayUnpaidAmount = unpaidTransactions 
                 .filter(t => t.employeeName.toLowerCase().includes(searchTerm) && t.date === getTodayDate()) 
                 .reduce((sum, t) => sum + t.orderAmount, 0); 
+            const todayPendingAmount = pendingTransactions 
+                .filter(t => t.employeeName.toLowerCase().includes(searchTerm) && t.date === getTodayDate()) 
+                .reduce((sum, t) => sum + t.orderAmount, 0); 
+ 
  
             employeeStats.innerHTML = ` 
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;"> 
                     <div> 
                         <h4 style="margin: 0; color: #333;">📊 Thống kê cho ${searchTerm.toUpperCase()}</h4> 
                         <p style="margin: 5px 0; color: #666;"> 
-                            Đã thanh toán: +${formatCurrency(totalPaidAmount)} |    
-                            Đang nợ: +${formatCurrency(totalUnpaidAmount)} |    
-                            Hôm nay: +${formatCurrency(todayPaidAmount + todayUnpaidAmount)} |    
+                            Đã thanh toán: +${formatCurrency(totalPaidAmount)} |     
+                            Đang nợ: +${formatCurrency(totalUnpaidAmount)} | 
+                            Đang chờ: +${formatCurrency(totalPendingAmount)} | 
+                            Tổng cộng: +${formatCurrency(totalPaidAmount + totalUnpaidAmount + totalPendingAmount)} | 
                             <span style="color: #e74c3c;">${allTransactionsForEmployee.length} đơn</span> 
                         </p> 
-                    </div> 
-                    <div style="font-size: 1.2em; font-weight: bold; color: #27ae60;"> 
-                        +${formatCurrency(totalPaidAmount + totalUnpaidAmount)} 
                     </div> 
                 </div> 
             `; 
@@ -1335,7 +1417,14 @@
                 saveOrder(); 
             } else if (e.key === 'Enter' && e.target.id === 'employeeName') { 
                 e.preventDefault(); 
-                document.getElementById('customerName').focus(); 
+                // Nếu có gợi ý đang chọn, chọn nó 
+                const employeeDropdown = document.getElementById('employeeAutocomplete'); 
+                const selectedItem = employeeDropdown.querySelector('.autocomplete-item.selected'); 
+                if (selectedItem) { 
+                    selectedItem.click(); 
+                } else { 
+                    document.getElementById('customerName').focus(); 
+                } 
             } else if (e.key === 'Enter' && e.target.id === 'customerName') { 
                 e.preventDefault(); 
                 document.getElementById('customerAddress').focus(); 
@@ -1344,13 +1433,22 @@
                 document.getElementById('customerPhone').focus(); 
             } else if (e.key === 'Enter' && e.target.id === 'customerPhone') { 
                 e.preventDefault(); 
-                document.getElementById('orderAmount').focus(); 
+                // Nếu có gợi ý đang chọn, chọn nó 
+                const phoneDropdown = document.getElementById('phoneAutocomplete'); 
+                const selectedItem = phoneDropdown.querySelector('.autocomplete-item.selected'); 
+                if (selectedItem) { 
+                    selectedItem.click(); 
+                } else { 
+                    document.getElementById('orderAmount').focus(); 
+                } 
             } else if (e.key === 'Enter' && e.target.id === 'newOrderAmount') { 
                 addNewOrder(); 
             } else if (e.key === 'Enter' && e.target.id === 'adjustmentAmount') { 
-                adjustTransactionAmount('add'); 
+                // Mặc định cộng tiền khi nhấn Enter 
+                adjustTransactionAmount('add');  
             } 
         }); 
     </script> 
 </body> 
-</html>
+</html> 
+
